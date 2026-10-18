@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Game</title>
+    <style>
+        :root {
+            --bg-1: #050816;
+            --bg-2: #0b1020;
+            --bg-3: #111b2d;
+            --panel: rgba(15, 23, 42, 0.72);
+            --panel-strong: rgba(11, 17, 32, 0.92);
+            --line: rgba(129, 140, 248, 0.35);
+            --primary: #67e8f9;
+            --secondary: #8b5cf6;
+            --success: #34d399;
+            --warning: #fbbf24;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --card-front: rgba(219, 234, 254, 0.96);
+            --card-back: linear-gradient(135deg, #0f172a 0%, #1d4ed8 42%, #7c3aed 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(103, 232, 249, 0.2), transparent 28%),
+                radial-gradient(circle at bottom right, rgba(139, 92, 246, 0.2), transparent 30%),
+                linear-gradient(160deg, var(--bg-1) 0%, var(--bg-2) 40%, var(--bg-3) 100%);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 24px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            width: 420px;
+            height: 420px;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.42;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        body::before {
+            top: -120px;
+            left: -80px;
+            background: rgba(34, 211, 238, 0.35);
+        }
+
+        body::after {
+            right: -100px;
+            bottom: -80px;
+            background: rgba(168, 85, 247, 0.36);
+        }
+
+        .container {
+            max-width: 980px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 1.8rem;
+        }
+
+        .header h1 {
+            font-size: clamp(2.3rem, 5vw, 4rem);
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 800;
+            background: linear-gradient(90deg, var(--primary), #c084fc 50%, #60a5fa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 24px rgba(103, 232, 249, 0.45);
+        }
+
+        .header p {
+            color: var(--muted);
+            font-size: 1rem;
+            letter-spacing: 0.04em;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            background: rgba(15, 23, 42, 0.72);
+            border: 1px solid var(--line);
+            box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.08), 0 18px 40px rgba(15, 23, 42, 0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+            padding: 1.1rem 1.25rem;
+            border-radius: 18px;
+            backdrop-filter: blur(12px);
+            margin-bottom: 1.4rem;
+        }
+
+        .stat {
+            min-width: 120px;
+            text-align: center;
+            padding: 0.4rem 0.8rem;
+            border-radius: 12px;
+            background: rgba(15, 118, 110, 0.08);
+            border: 1px solid rgba(103, 232, 249, 0.14);
+        }
+
+        .stat h2 {
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            color: var(--muted);
+            letter-spacing: 0.14em;
+            margin-bottom: 0.2rem;
+        }
+
+        .stat-value {
+            font-size: clamp(1.2rem, 2vw, 1.6rem);
+            font-weight: 800;
+            color: var(--primary);
+            text-shadow: 0 0 12px rgba(103, 232, 249, 0.5);
+        }
+
+        .grid-selector {
+            display: flex;
+            justify-content: center;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            text-align: center;
+            margin-bottom: 1.6rem;
+        }
+
+        button {
+            padding: 0.8rem 1.25rem;
+            border: 1px solid rgba(103, 232, 249, 0.28);
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.8);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 0.96rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-weight: 700;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 12px 22px rgba(15, 23, 42, 0.25);
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            border-color: rgba(103, 232, 249, 0.6);
+            box-shadow: 0 0 18px rgba(103, 232, 249, 0.32);
+        }
+
+        button.active {
+            background: linear-gradient(135deg, rgba(103, 232, 249, 0.2), rgba(139, 92, 246, 0.15));
+            border-color: rgba(103, 232, 249, 0.9);
+            color: white;
+            box-shadow: 0 0 18px rgba(103, 232, 249, 0.35);
+        }
+
+        .game-grid {
+            display: grid;
+            gap: 12px;
+            margin: 0 auto;
+            perspective: 1200px;
+            padding: 18px;
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 22px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 18px 36px rgba(2, 6, 23, 0.4);
+            backdrop-filter: blur(8px);
+        }
+
+        .grid-4x4 {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            max-width: 620px;
+        }
+
+        .grid-6x6 {
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            max-width: 760px;
+        }
+
+        .card {
+            aspect-ratio: 3 / 4;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(.2,.8,.2,1), box-shadow 0.2s ease;
+            cursor: pointer;
+            border-radius: 18px;
+        }
+
+        .card:hover {
+            box-shadow: 0 0 18px rgba(103, 232, 249, 0.22);
+        }
+
+        .card:focus {
+            outline: 2px solid var(--primary);
+            outline-offset: 3px;
+        }
+
+        .card[aria-pressed="true"] {
+            transform: rotateY(180deg);
+        }
+
+        .card.matched {
+            transform: rotateY(180deg);
+            cursor: default;
+            box-shadow: 0 0 25px rgba(52, 211, 153, 0.46);
+        }
+
+        .card-face {
+            position: absolute;
+            inset: 0;
+            backface-visibility: hidden;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(1.5rem, 3vw, 2.3rem);
+            -webkit-backface-visibility: hidden;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 10px 18px rgba(2, 6, 23, 0.36);
+            border: 1px solid rgba(147, 197, 253, 0.25);
+        }
+
+        .card-front {
+            background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(191, 219, 254, 0.92));
+            color: #0f172a;
+            transform: rotateY(180deg);
+        }
+
+        .card-back {
+            background: var(--card-back);
+            color: white;
+            font-size: clamp(1.7rem, 3vw, 2.4rem);
+            text-shadow: 0 0 18px rgba(103, 232, 249, 0.7);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.72);
+            backdrop-filter: blur(8px);
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+        }
+
+        .modal-content {
+            background: rgba(15, 23, 42, 0.88);
+            border: 1px solid rgba(103, 232, 249, 0.35);
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 18px 48px rgba(15, 23, 42, 0.7), 0 0 24px rgba(59, 130, 246, 0.24);
+            padding: 2rem 1.5rem;
+            border-radius: 22px;
+            text-align: center;
+            max-width: 440px;
+            width: 90%;
+        }
+
+        .modal-content h2 {
+            color: var(--primary);
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            margin-bottom: 0.6rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .modal-content p {
+            color: var(--muted);
+            margin-bottom: 0.6rem;
+        }
+
+        .final-stats {
+            font-weight: 700;
+            color: var(--text);
+            margin: 0.5rem 0 1rem;
+        }
+
+        .best-scores {
+            margin-top: 2rem;
+            text-align: center;
+        }
+
+        .best-scores h2 {
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--muted);
+            margin-bottom: 0.8rem;
+            font-size: 0.85rem;
+        }
+
+        .scores-list {
+            max-width: 640px;
+            margin: 0 auto;
+            background: rgba(15, 23, 42, 0.72);
+            border: 1px solid rgba(103, 232, 249, 0.2);
+            border-radius: 18px;
+            padding: 1rem 1.1rem;
+            box-shadow: 0 16px 30px rgba(15, 23, 42, 0.25);
+            color: var(--text);
+        }
+
+        .scores-list p {
+            padding: 0.5rem 0.25rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+        }
+
+        .scores-list p:last-child {
+            border-bottom: none;
+        }
+
+        @media (max-width: 680px) {
+            body {
+                padding: 18px 12px 32px;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .game-grid {
+                gap: 8px;
+                padding: 12px;
+            }
+
+            .card-face {
+                font-size: 1.45rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Game header with title and instructions -->
+        <header class="header">
+            <h1>Astha's Game</h1>
+            <p>Match the data cores and beat the circuit.</p>
+        </header>
+
+        <!-- Game statistics panel -->
+        <div class="controls">
+            <div class="stat">
+                <h2>Moves</h2>
+                <p class="stat-value moves" aria-live="polite">0</p>
+            </div>
+            <div class="stat">
+                <h2>Time</h2>
+                <p class="stat-value timer" aria-live="polite">00:00</p>
+            </div>
+            <div class="stat">
+                <h2>Rating</h2>
+                <p class="stat-value rating" aria-live="polite">★★★</p>
+            </div>
+        </div>
+
+        <!-- Grid size selector -->
+        <div class="grid-selector">
+            <button class="grid-btn active" data-size="4">4x4 Grid</button>
+            <button class="grid-btn" data-size="6">6x6 Grid</button>
+        </div>
+
+        <!-- Game grid -->
+        <div class="game-grid grid-4x4" role="grid" aria-label="Memory Game Grid"></div>
+
+        <!-- Best scores section -->
+        <div class="best-scores">
+            <h2>Best Scores</h2>
+            <div class="scores-list"></div>
+        </div>
+    </div>
+
+    <!-- Win modal -->
+    <div class="modal" role="dialog" aria-label="Game Complete">
+        <div class="modal-content">
+            <h2>System Clear</h2>
+            <p>All memory cores synchronized.</p>
+            <p class="final-stats"></p>
+            <button class="play-again">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Game state management
+        const gameState = {
+            moves: 0,
+            matches: 0,
+            timer: 0,
+            timerInterval: null,
+            firstCard: null,
+            secondCard: null,
+            canFlip: true,
+            gridSize: 4,
+            totalPairs: 8,
+            gameStarted: false
+        };
+
+        // DOM Elements
+        const elements = {
+            grid: document.querySelector('.game-grid'),
+            moves: document.querySelector('.moves'),
+            timer: document.querySelector('.timer'),
+            rating: document.querySelector('.rating'),
+            modal: document.querySelector('.modal'),
+            finalStats: document.querySelector('.final-stats'),
+            gridButtons: document.querySelectorAll('.grid-btn'),
+            scoresList: document.querySelector('.scores-list')
+        };
+
+        // Card symbols (emojis) for both grid sizes
+        const symbols = {
+            '4x4': ['🎨', '🎭', '🎪', '🎫', '🎯', '🎲', '🎮', '🎰'],
+            '6x6': ['🎨', '🎭', '🎪', '🎫', '🎯', '🎲', '🎮', '🎰', '🎱', '🎳', 
+                   '🎸', '🎺', '🎻', '🎹', '🎷', '🥁', '🎼', '🎵']
+        };
+
+        // Shuffle array using Fisher-Yates algorithm
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Create a single card element
+        function createCard(symbol, index) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.setAttribute('role', 'gridcell');
+            card.setAttribute('aria-pressed', 'false');
+            card.setAttribute('tabindex', '0');
+            card.setAttribute('aria-label', `Card ${index + 1}`);
+            
+            card.innerHTML = `
+                <div class="card-face card-front">${symbol}</div>
+                <div class="card-face card-back">?</div>
+            `;
+            
+            card.dataset.symbol = symbol;
+            return card;
+        }
+
+        // Initialize or reset game grid
+        function initializeGrid() {
+            // Clear existing grid and reset game state
+            elements.grid.innerHTML = '';
+            gameState.moves = 0;
+            gameState.matches = 0;
+            gameState.firstCard = null;
+            gameState.secondCard = null;
+            gameState.canFlip = true;
+            gameState.gameStarted = false;
+            
+            // Reset display elements
+            elements.moves.textContent = '0';
+            elements.rating.textContent = '★★★';
+            clearInterval(gameState.timerInterval);
+            gameState.timer = 0;
+            elements.timer.textContent = '00:00';
+
+            // Set up grid based on selected size
+            const currentSymbols = symbols[`${gameState.gridSize}x${gameState.gridSize}`];
+            gameState.totalPairs = currentSymbols.length;
+            
+            // Update grid class for correct layout
+            elements.grid.className = `game-grid grid-${gameState.gridSize}x${gameState.gridSize}`;
+            
+            // Create and shuffle cards
+            const shuffledSymbols = shuffle([...currentSymbols, ...currentSymbols]);
+            shuffledSymbols.forEach((symbol, index) => {
+                elements.grid.appendChild(createCard(symbol, index));
+            });
+        }
+
+        // Start game timer
+        function startTimer() {
+            if (!gameState.gameStarted) {
+                gameState.gameStarted = true;
+                gameState.timerInterval = setInterval(() => {
+                    gameState.timer++;
+                    const minutes = Math.floor(gameState.timer / 60);
+                    const seconds = gameState.timer % 60;
+                    elements.timer.textContent = 
+                        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }, 1000);
+            }
+        }
+
+        // Update star rating based on number of moves
+        function updateRating() {
+            const moves = gameState.moves;
+            const maxMoves = gameState.totalPairs * 2.5;
+            
+            if (moves <= maxMoves) {
+                elements.rating.textContent = '★★★';
+            } else if (moves <= maxMoves * 1.5) {
+                elements.rating.textContent = '★★☆';
+            } else {
+                elements.rating.textContent = '★☆☆';
+            }
+        }
+
+        // Check for win condition and handle game completion
+        function checkWin() {
+            if (gameState.matches === gameState.totalPairs) {
+                clearInterval(gameState.timerInterval);
+                
+                // Save score to localStorage
+                const score = {
+                    moves: gameState.moves,
+                    time: gameState.timer,
+                    rating: elements.rating.textContent,
+                    gridSize: gameState.gridSize,
+                    date: new Date().toISOString()
+                };
+                
+                const scores = JSON.parse(localStorage.getItem('memoryGameScores') || '[]');
+                scores.push(score);
+                scores.sort((a, b) => a.moves - b.moves);
+                localStorage.setItem('memoryGameScores', JSON.stringify(scores.slice(0, 5)));
+                
+                // Show win modal
+                elements.finalStats.textContent = `
+                    Moves: ${gameState.moves}
+                    Time: ${elements.timer.textContent}
+                    Rating: ${elements.rating.textContent}
+                `;
+                elements.modal.style.display = 'flex';
+                
+                updateScoresList();
+            }
+        }
+
+        // Update the display of best scores
+        function updateScoresList() {
+            const scores = JSON.parse(localStorage.getItem('memoryGameScores') || '[]');
+            elements.scoresList.innerHTML = scores.length ? 
+                scores.map((score, index) => `
+                    <p>${index + 1}. ${score.gridSize}x${score.gridSize} Grid - 
+                       ${score.moves} Moves, 
+                       Time: ${Math.floor(score.time / 60)}:${(score.time % 60).toString().padStart(2, '0')}, 
+                       Rating: ${score.rating}</p>
+                `).join('') :
+                '<p>No scores yet. Start playing to set some records!</p>';
+        }
+
+        // Handle card flip logic
+        function flipCard(card) {
+            if (!gameState.canFlip || card.classList.contains('matched') || 
+                card.getAttribute('aria-pressed') === 'true') return;
+
+            startTimer();
+            card.setAttribute('aria-pressed', 'true');
+
+            if (!gameState.firstCard) {
+                gameState.firstCard = card;
+            } else if (!gameState.secondCard && card !== gameState.firstCard) {
+                gameState.secondCard = card;
+                gameState.canFlip = false;
+                gameState.moves++;
+                elements.moves.textContent = gameState.moves;
+                updateRating();
+
+                // Check for match
+                if (gameState.firstCard.dataset.symbol === gameState.secondCard.dataset.symbol) {
+                    gameState.matches++;
+                    gameState.firstCard.classList.add('matched');
+                    gameState.secondCard.classList.add('matched');
+                    gameState.firstCard.setAttribute('aria-label', 'Matched');
+                    gameState.secondCard.setAttribute('aria-label', 'Matched');
+                    gameState.firstCard = null;
+                    gameState.secondCard = null;
+                    gameState.canFlip = true;
+                    checkWin();
+                } else {
+                    // No match - flip cards back
+                    setTimeout(() => {
+                        gameState.firstCard.setAttribute('aria-pressed', 'false');
+                        gameState.secondCard.setAttribute('aria-pressed', 'false');
+                        gameState.firstCard = null;
+                        gameState.secondCard = null;
+                        gameState.canFlip = true;
+                    }, 1000);
+                }
+            }
+        }
+
+        // Event Listeners
+        elements.grid.addEventListener('click', (e) => {
+            const card = e.target.closest('.card');
+            if (card) flipCard(card);
+        });
+
+        elements.grid.addEventListener('keydown', (e) => {
+            const card = e.target.closest('.card');
+            if (card && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                flipCard(card);
+            }
+        });
+
+        document.querySelector('.play-again').addEventListener('click', () => {
+            elements.modal.style.display = 'none';
+            initializeGrid();
+        });
+
+        elements.gridButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const size = parseInt(button.dataset.size);
+                if (size !== gameState.gridSize) {
+                    gameState.gridSize = size;
+                    elements.gridButtons.forEach(btn => btn.classList.toggle('active'));
+                    initializeGrid();
+                }
+            });
+        });
+
+        // Initialize game
+        updateScoresList();
+        initializeGrid();
+    </script>
+</body>
+</html>
